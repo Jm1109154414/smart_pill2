@@ -253,6 +253,9 @@ export default function DevQuickstart() {
           <CardTitle>🚀 Acciones Rápidas</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-wrap gap-3">
+          <Button onClick={() => navigate("/dev/config-check")} variant="default">
+            Verificador de Configuración
+          </Button>
           <Button onClick={() => navigate("/notifications")}>
             Activar Notificaciones
           </Button>

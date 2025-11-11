@@ -13,6 +13,7 @@ import Reports from "./pages/Reports";
 import Notifications from "./pages/Notifications";
 import NotificationSnooze from "./pages/NotificationSnooze";
 import DevQuickstart from "./pages/DevQuickstart";
+import ConfigCheck from "./pages/ConfigCheck";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -34,6 +35,7 @@ const App = () => (
           <Route path="/notifications" element={<Notifications />} />
           <Route path="/notifications/snooze" element={<NotificationSnooze />} />
           <Route path="/dev/quickstart" element={<DevQuickstart />} />
+          <Route path="/dev/config-check" element={<ConfigCheck />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

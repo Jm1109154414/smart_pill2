@@ -29,14 +29,45 @@ serve(async (req) => {
       console.error('Error checking buckets:', e);
     }
 
+    const result: any = {
+      ok: true,
+      hasVapidPublic,
+      hasVapidPrivate,
+      hasReportsBucket,
+      timestamp: new Date().toISOString(),
+    };
+
+    // If Authorization header is present, get user-specific counts
+    const authHeader = req.headers.get('Authorization');
+    if (authHeader) {
+      try {
+        const { data: { user }, error: authError } = await supabase.auth.getUser(
+          authHeader.replace('Bearer ', '')
+        );
+        
+        if (!authError && user) {
+          // Count push subscriptions
+          const { count: pushCount } = await supabase
+            .from('push_subscriptions')
+            .select('*', { count: 'exact', head: true })
+            .eq('user_id', user.id);
+          
+          // Count devices
+          const { count: devicesCount } = await supabase
+            .from('devices')
+            .select('*', { count: 'exact', head: true })
+            .eq('user_id', user.id);
+          
+          result.pushSubsCount = pushCount ?? 0;
+          result.devicesCount = devicesCount ?? 0;
+        }
+      } catch (e) {
+        console.error('Error getting user counts:', e);
+      }
+    }
+
     return new Response(
-      JSON.stringify({
-        ok: true,
-        hasVapidPublic,
-        hasVapidPrivate,
-        hasReportsBucket,
-        timestamp: new Date().toISOString(),
-      }),
+      JSON.stringify(result),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       }
