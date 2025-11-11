@@ -1,0 +1,110 @@
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-device-serial, x-device-secret',
+};
+
+serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    
+    const supabase = createClient(supabaseUrl, supabaseServiceKey, {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+      },
+    });
+
+    const serial = req.headers.get('X-Device-Serial');
+    const secret = req.headers.get('X-Device-Secret');
+
+    if (!serial || !secret) {
+      return new Response(JSON.stringify({ error: 'Missing device credentials' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Verify device
+    const { data: device, error: deviceError } = await supabase
+      .from('devices')
+      .select('id, secret')
+      .eq('serial', serial)
+      .single();
+
+    if (deviceError || !device) {
+      return new Response(JSON.stringify({ error: 'Device not found' }), {
+        status: 404,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Verify secret
+    const encoder = new TextEncoder();
+    const secretData = encoder.encode(secret);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', secretData);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+
+    if (hashHex !== device.secret) {
+      return new Response(JSON.stringify({ error: 'Invalid credentials' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const url = new URL(req.url);
+    const since = url.searchParams.get('since');
+
+    // Fetch pending commands
+    let query = supabase
+      .from('commands')
+      .select('*')
+      .eq('device_id', device.id)
+      .eq('status', 'pending')
+      .order('created_at', { ascending: true });
+
+    if (since) {
+      query = query.gt('created_at', since);
+    }
+
+    const { data: commands, error } = await query;
+
+    if (error) {
+      console.error('Commands query error:', error);
+      return new Response(JSON.stringify({ error: error.message }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Mark commands as acknowledged
+    if (commands && commands.length > 0) {
+      const commandIds = commands.map(c => c.id);
+      await supabase
+        .from('commands')
+        .update({ status: 'ack', updated_at: new Date().toISOString() })
+        .in('id', commandIds);
+
+      console.log(`Commands polled: ${commands.length} for device ${device.id}`);
+    }
+
+    return new Response(JSON.stringify({ commands: commands || [] }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  } catch (error) {
+    console.error('Error in commands-poll:', error);
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    return new Response(JSON.stringify({ error: message }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+});
