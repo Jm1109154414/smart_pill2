@@ -1,73 +1,272 @@
-# Welcome to your Lovable project
+# PillMate - Smart Pillbox System
 
-## Project info
+Sistema inteligente de pastillero con Raspberry Pi 3 y PWA para gestión de medicamentos, confirmación por peso y notificaciones Web Push.
 
-**URL**: https://lovable.dev/projects/990f6c5c-1dcf-4c50-a9e5-8776d144c28e
+## 🏗️ Arquitectura
 
-## How can I edit this code?
+### Stack Tecnológico
+- **Frontend**: React 18 + Vite + TypeScript + Tailwind CSS + shadcn/ui
+- **Backend**: Supabase (Auth, PostgreSQL, Storage) + Edge Functions (Deno)
+- **Hardware**: Raspberry Pi 3 + Sensor HX711 + LED + Buzzer
+- **Comunicación**: HTTP/HTTPS exclusivamente (no MQTT)
 
-There are several ways of editing your application.
+### Características Principales
+- ✅ Registro y autenticación de usuarios
+- ✅ Gestión de dispositivos (Raspberry Pi)
+- ✅ Configuración de 5 compartimentos por dispositivo
+- ✅ Programación de horarios con días, ventanas y alarmas
+- ✅ Notificaciones Web Push en tiempo real
+- ✅ Confirmación automática de tomas por caída de peso
+- ✅ Dashboard con métricas de adherencia
+- ✅ Generación de reportes PDF (semanales/mensuales)
+- ✅ Sistema de comandos (snooze, apply_config, reboot)
+- ✅ PWA instalable con Service Worker
 
-**Use Lovable**
+## 📋 Requisitos Previos
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/990f6c5c-1dcf-4c50-a9e5-8776d144c28e) and start prompting.
+### Para el Frontend (PWA)
+```bash
+Node.js >= 18
+npm o bun
+```
 
-Changes made via Lovable will be committed automatically to this repo.
+### Para el Backend
+- Cuenta de Supabase (o Lovable Cloud)
+- Claves VAPID para Web Push
 
-**Use your preferred IDE**
+### Para la Raspberry Pi
+```bash
+Python 3.9+
+GPIO configurado
+Sensor HX711 conectado
+```
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+## 🚀 Instalación y Configuración
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+### 1. Clonar el Repositorio
+```bash
+git clone <repository-url>
+cd pillmate
+npm install
+```
 
-Follow these steps:
+### 2. Configurar Variables de Entorno
+Crear archivo `.env` basado en `.env.example`:
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+```bash
+# Supabase
+VITE_SUPABASE_URL=https://tu-proyecto.supabase.co
+VITE_SUPABASE_ANON_KEY=tu-anon-key
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+# VAPID Keys (generar con: npx web-push generate-vapid-keys)
+VITE_VAPID_PUBLIC_KEY=tu-vapid-public-key
+```
 
-# Step 3: Install the necessary dependencies.
-npm i
+### 3. Generar Claves VAPID
+```bash
+npx web-push generate-vapid-keys
+```
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+Copiar las claves generadas:
+- `VAPID_PUBLIC_KEY` → Configurar como `VITE_VAPID_PUBLIC_KEY` en `.env` local
+- `VAPID_PRIVATE_KEY` → Configurar solo en Supabase Secrets (Cloud → Settings → Secrets)
+- `VAPID_PUBLIC` → También en Supabase Secrets
+
+**IMPORTANTE:** Configurar ambas claves en Supabase Secrets con estos nombres exactos:
+- `VAPID_PUBLIC_KEY` (o `VAPID_PUBLIC`)
+- `VAPID_PRIVATE_KEY` (o `VAPID_PRIVATE`)
+
+### 4. Crear Bucket de Storage
+El bucket `reports` se crea automáticamente con la migración. Si necesitas crearlo manualmente:
+
+```sql
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES ('reports', 'reports', false, 26214400, ARRAY['application/pdf']);
+```
+
+### 5. Edge Functions
+Las funciones se despliegan automáticamente. Verificar en Supabase Dashboard:
+- `devices-register`, `devices-config`
+- `events-dose`, `weights-bulk`, `doses-query`
+- `reports-generate`
+- `push-subscribe`, `push-send`, `alarm-start`
+- `commands-create`, `commands-poll`, `commands-ack`
+
+### 6. Ejecutar Localmente
+```bash
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+Abrir http://localhost:5173
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+## 🔌 Contrato HTTP para Raspberry Pi
 
-**Use GitHub Codespaces**
+Base URL: `https://tu-proyecto.supabase.co/functions/v1`
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+### Autenticación
+Headers requeridos para endpoints de dispositivo:
+```
+X-Device-Serial: <serial-del-dispositivo>
+X-Device-Secret: <secret-del-dispositivo>
+```
 
-## What technologies are used for this project?
+### Endpoints Principales
 
-This project is built with:
+#### 1. Obtener Configuración
+```http
+GET /devices-config
+Headers:
+  X-Device-Serial: RPI-12345
+  X-Device-Secret: mi-secret-seguro
+```
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+**Respuesta:**
+```json
+{
+  "timezone": "America/Mexico_City",
+  "deviceId": "uuid",
+  "compartments": [...],
+  "schedules": [...]
+}
+```
 
-## How can I deploy this project?
+#### 2. Reportar Evento de Dosis
+```http
+POST /events-dose
+Content-Type: application/json
 
-Simply open [Lovable](https://lovable.dev/projects/990f6c5c-1dcf-4c50-a9e5-8776d144c28e) and click on Share -> Publish.
+{
+  "serial": "RPI-12345",
+  "secret": "mi-secret-seguro",
+  "compartmentId": "uuid",
+  "scheduledAt": "2025-01-11T08:00:00Z",
+  "status": "taken",
+  "actualAt": "2025-01-11T08:02:30Z",
+  "deltaWeightG": 0.48
+}
+```
 
-## Can I connect a custom domain to my Lovable project?
+#### 3. Enviar Lecturas de Peso (Batch)
+```http
+POST /weights-bulk
+Content-Type: application/json
 
-Yes, you can!
+{
+  "serial": "RPI-12345",
+  "secret": "mi-secret-seguro",
+  "readings": [
+    {
+      "measuredAt": "2025-01-11T08:00:00Z",
+      "weightG": 125.43,
+      "raw": { "adc": 12345 }
+    }
+  ]
+}
+```
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+#### 4. Iniciar Alarma (Envía Push)
+```http
+POST /alarm-start
+Content-Type: application/json
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+{
+  "serial": "RPI-12345",
+  "secret": "mi-secret-seguro",
+  "compartmentId": "uuid",
+  "scheduledAt": "2025-01-11T08:00:00Z",
+  "title": "Aspirina"
+}
+```
+
+#### 5. Consultar Comandos (Polling)
+```http
+GET /commands-poll?since=2025-01-11T08:00:00Z
+Headers:
+  X-Device-Serial: RPI-12345
+  X-Device-Secret: mi-secret-seguro
+```
+
+#### 6. Confirmar Comando
+```http
+POST /commands-ack
+Content-Type: application/json
+
+{
+  "serial": "RPI-12345",
+  "secret": "mi-secret-seguro",
+  "commandId": "uuid",
+  "status": "done"
+}
+```
+
+### Flujo de Trabajo de la Raspberry Pi
+
+1. **Startup:** Sincronizar NTP, obtener configuración, programar alarmas
+2. **Loop:** Polling de comandos cada 60s, monitorear peso
+3. **Alarma:** Activar LED/Buzzer, POST a `alarm-start` (envía push)
+4. **Toma:** Detectar caída de peso, POST a `events-dose`
+5. **Comandos:** Procesar snooze, apply_config, reboot
+
+## 🔔 Notificaciones Web Push
+
+### Configuración
+1. Navegar a `/notifications`
+2. Hacer clic en "Activar notificaciones"
+3. Aceptar permisos del navegador
+
+### Acciones de Notificación
+- **Abrir**: Abre `/dashboard`
+- **Posponer 5 min**: Crea comando `snooze` y abre ruta especial
+
+## 📊 Reportes PDF
+
+1. Navegar a `/reports?deviceId=<id>`
+2. Seleccionar tipo (Semanal/Mensual)
+3. Hacer clic en "Generar PDF"
+4. El PDF se genera y descarga con URL firmada
+
+**Contenido:**
+- Métricas de adherencia (% taken, tardías, omitidas)
+- Tabla completa de eventos del período
+
+## 🔒 Seguridad
+
+- **RLS**: Políticas estrictas que aíslan recursos por usuario
+- **Secrets**: Hasheados con SHA-256 (no texto plano)
+- **Rate Limiting**: En login y funciones públicas
+- **Bucket privado**: Reports solo accesibles por URL firmada
+
+## 📱 PWA
+
+- Instalable en móviles y escritorio
+- Service Worker registrado para push
+- Funciona offline (cache estático)
+- Manifest con iconos
+
+## 🐛 Troubleshooting
+
+### Notificaciones no llegan
+- Verificar permisos del navegador
+- Comprobar que Service Worker está activo
+- Revisar logs de `push-send`
+
+### Error de bucket reports
+Si ves error `reports_bucket_missing`:
+```sql
+INSERT INTO storage.buckets (id, name, public) 
+VALUES ('reports', 'reports', false);
+```
+
+## 📚 Recursos
+
+- [Documentación Supabase](https://supabase.com/docs)
+- [Web Push Protocol](https://developers.google.com/web/fundamentals/push-notifications)
+- [Raspberry Pi GPIO](https://www.raspberrypi.com/documentation/)
+
+## 📝 Licencia
+
+MIT License
+
+---
+
+**Nota de Seguridad:** Este proyecto requiere que habilites la protección de contraseñas filtradas en Supabase Auth para cumplir con las mejores prácticas de seguridad. Ve a Dashboard → Authentication → Providers → Email → Password Protection.

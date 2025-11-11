@@ -21,7 +21,7 @@ export async function registerPush(publicVapidKey: string): Promise<PushSub> {
   const appServerKey = urlBase64ToUint8Array(publicVapidKey);
   const sub = await reg.pushManager.subscribe({ 
     userVisibleOnly: true, 
-    applicationServerKey: appServerKey 
+    applicationServerKey: appServerKey.buffer as ArrayBuffer
   });
 
   // Save to backend
