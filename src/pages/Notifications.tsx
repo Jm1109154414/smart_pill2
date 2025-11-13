@@ -7,7 +7,7 @@ import { ArrowLeft, Bell, BellOff, AlertCircle } from "lucide-react";
 import { registerPush, unregisterPush, isPushEnabled } from "@/lib/push-notifications";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
-const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC;
+const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC as string;
 
 export default function Notifications() {
   const navigate = useNavigate();
@@ -38,7 +38,7 @@ export default function Notifications() {
 
     setProcessing(true);
     try {
-      const sub = await registerPush(VAPID_PUBLIC_KEY);
+      const sub = await registerPush();
       if (sub) {
         setEnabled(true);
         toast({

@@ -51,30 +51,45 @@ npm install
 ```
 
 ### 2. Configurar Variables de Entorno
-Crear archivo `.env` basado en `.env.example`:
+
+**IMPORTANTE:** El archivo `.env` NO se versiona (protegido por `.gitignore`). 
+
+Crear archivo `.env` local basado en `.env.example`:
 
 ```bash
-# Supabase
+# Supabase (configuradas automáticamente por Lovable Cloud)
 VITE_SUPABASE_URL=https://tu-proyecto.supabase.co
 VITE_SUPABASE_ANON_KEY=tu-anon-key
+VITE_SUPABASE_PROJECT_ID=tu-project-id
 
-# VAPID Keys (generar con: npx web-push generate-vapid-keys)
-VITE_VAPID_PUBLIC_KEY=tu-vapid-public-key
+# VAPID Keys - Cliente (generar con: npx web-push generate-vapid-keys)
+VITE_VAPID_PUBLIC=tu-vapid-public-key
 ```
 
-### 3. Generar Claves VAPID
+### 3. Generar y Configurar Claves VAPID
 ```bash
 npx web-push generate-vapid-keys
 ```
 
-Copiar las claves generadas:
-- `VAPID_PUBLIC_KEY` → Configurar como `VITE_VAPID_PUBLIC_KEY` en `.env` local
-- `VAPID_PRIVATE_KEY` → Configurar solo en Supabase Secrets (Cloud → Settings → Secrets)
-- `VAPID_PUBLIC` → También en Supabase Secrets
+**Configuración de claves VAPID:**
 
-**IMPORTANTE:** Configurar ambas claves en Supabase Secrets con estos nombres exactos:
-- `VAPID_PUBLIC_KEY` (o `VAPID_PUBLIC`)
-- `VAPID_PRIVATE_KEY` (o `VAPID_PRIVATE`)
+#### Frontend (Variables Públicas)
+En Lovable: Settings → Environment → Frontend/Public variables
+```
+VITE_VAPID_PUBLIC = <TU_PUBLIC_KEY>
+```
+
+#### Servidor (Secrets - Edge Functions)
+En Lovable: Settings → Environment → Server/Secrets
+```
+VAPID_PUBLIC = <TU_PUBLIC_KEY>
+VAPID_PRIVATE = <TU_PRIVATE_KEY>
+```
+
+**CRÍTICO:** 
+- La clave `VAPID_PRIVATE` NUNCA debe exponerse al cliente
+- Solo se configura en secretos del servidor
+- El cliente solo necesita `VITE_VAPID_PUBLIC`
 
 ### 4. Crear Bucket de Storage
 El bucket `reports` se crea automáticamente con la migración. Si necesitas crearlo manualmente:
@@ -243,12 +258,82 @@ Content-Type: application/json
 - Funciona offline (cache estático)
 - Manifest con iconos
 
+## 🧪 Pruebas Rápidas
+
+### Verificar Configuración
+1. Visita `/dev/config-check` para ver el estado completo del sistema
+2. Confirma que todos los checks estén en verde ✅
+3. Si hay errores, sigue las instrucciones en pantalla
+
+### Activar Notificaciones
+1. Ve a `/notifications` o usa el botón en `/dev/config-check`
+2. Haz clic en "Activar notificaciones"
+3. Acepta los permisos del navegador
+4. Usa "Notificación de prueba (self)" para verificar
+
+### Registrar Dispositivo
+1. Ve a `/device`
+2. Completa el formulario con `serial`, `secret`, `name` y `timezone`
+3. Guarda el dispositivo
+
+### Probar Raspberry Pi (con curl)
+Desde la Pi o cualquier terminal, reemplaza los placeholders:
+```bash
+# Activar alarma (envía push al usuario)
+curl -X POST https://tu-proyecto.supabase.co/functions/v1/alarm-start \
+  -H "Content-Type: application/json" \
+  -d '{
+    "serial": "TU-SERIAL",
+    "secret": "TU-SECRET",
+    "compartmentId": "uuid-compartment",
+    "scheduledAt": "2025-01-15T08:00:00Z"
+  }'
+
+# Reportar toma de pastilla
+curl -X POST https://tu-proyecto.supabase.co/functions/v1/events-dose \
+  -H "Content-Type: application/json" \
+  -d '{
+    "serial": "TU-SERIAL",
+    "secret": "TU-SECRET",
+    "compartmentId": "uuid-compartment",
+    "scheduledAt": "2025-01-15T08:00:00Z",
+    "takenAt": "2025-01-15T08:02:30Z",
+    "confirmedByWeight": true,
+    "measuredWeightG": 0.5
+  }'
+```
+
+### Generar Reporte
+1. Ve a `/reports`
+2. Selecciona tipo (Semanal/Mensual)
+3. Haz clic en "Generar PDF"
+4. Descarga el reporte generado
+
 ## 🐛 Troubleshooting
 
+### Verificador de Configuración
+Visita `/dev/config-check` para diagnosticar problemas de configuración:
+- Estado de `VITE_VAPID_PUBLIC`
+- Service Worker y PushManager disponibles
+- Permisos de notificación
+- Claves VAPID del servidor (`VAPID_PUBLIC`/`VAPID_PRIVATE`)
+- Bucket `reports` creado
+- Conteo de suscripciones y dispositivos
+
 ### Notificaciones no llegan
-- Verificar permisos del navegador
-- Comprobar que Service Worker está activo
-- Revisar logs de `push-send`
+1. Verificar que `VITE_VAPID_PUBLIC` está configurada (ver `/dev/config-check`)
+2. Confirmar que `VAPID_PUBLIC` y `VAPID_PRIVATE` están en Server Secrets
+3. Verificar permisos del navegador (deben ser "granted")
+4. Comprobar que Service Worker está activo
+5. Revisar logs de `push-send` en Edge Functions
+6. Usar botón "Notificación de prueba (self)" en `/dev/config-check`
+
+### Error de claves VAPID
+Si ves `missing_vapid_keys`:
+- **Cliente:** Configurar `VITE_VAPID_PUBLIC` en Frontend/Public variables
+- **Servidor:** Configurar `VAPID_PUBLIC` y `VAPID_PRIVATE` en Server/Secrets
+- Generar con: `npx web-push generate-vapid-keys`
+- **CRÍTICO:** La `VAPID_PRIVATE` NUNCA debe exponerse al cliente
 
 ### Error de bucket reports
 Si ves error `reports_bucket_missing`:

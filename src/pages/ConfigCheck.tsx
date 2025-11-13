@@ -29,7 +29,7 @@ export default function ConfigCheck() {
   const [hasSubscription, setHasSubscription] = useState(false);
   const [processing, setProcessing] = useState(false);
 
-  const vapidPublic = import.meta.env.VITE_VAPID_PUBLIC || "";
+  const vapidPublic = (import.meta.env.VITE_VAPID_PUBLIC as string) || "";
   const hasVapidFrontend = vapidPublic && vapidPublic !== "TU_CLAVE_PUBLICA_VAPID_AQUI";
 
   useEffect(() => {
@@ -102,7 +102,7 @@ export default function ConfigCheck() {
 
     setProcessing(true);
     try {
-      const sub = await registerPush(vapidPublic);
+      const sub = await registerPush();
       if (sub) {
         toast({
           title: "Éxito",
@@ -138,7 +138,7 @@ export default function ConfigCheck() {
         }
       }
       
-      const sub = await registerPush(vapidPublic);
+      const sub = await registerPush();
       if (sub) {
         toast({
           title: "Éxito",
