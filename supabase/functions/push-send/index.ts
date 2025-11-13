@@ -15,19 +15,19 @@ serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const vapidPublic = Deno.env.get('VAPID_PUBLIC_KEY');
-    const vapidPrivate = Deno.env.get('VAPID_PRIVATE_KEY');
+    const vapidPublic = Deno.env.get('VAPID_PUBLIC');
+    const vapidPrivate = Deno.env.get('VAPID_PRIVATE');
 
     if (!vapidPublic || !vapidPrivate) {
       console.error('VAPID keys not configured');
-      return new Response(JSON.stringify({ error: 'VAPID keys not configured' }), {
+      return new Response(JSON.stringify({ error: 'missing_vapid_keys' }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
     webpush.setVapidDetails(
-      'mailto:noreply@pillmate.app',
+      'mailto:support@pillmate.app',
       vapidPublic,
       vapidPrivate
     );

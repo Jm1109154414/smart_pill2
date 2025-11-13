@@ -11,14 +11,19 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array {
   return outputArray;
 }
 
-export async function registerPush(publicVapidKey: string): Promise<PushSub> {
+export async function registerPush(): Promise<PushSub> {
+  const publicKey = import.meta.env.VITE_VAPID_PUBLIC as string;
+  if (!publicKey) {
+    throw new Error('VAPID pública ausente: define VITE_VAPID_PUBLIC');
+  }
+
   if (!('serviceWorker' in navigator) || !('PushManager' in window)) return null;
 
   const reg = await navigator.serviceWorker.register('/sw.js');
   const perm = await Notification.requestPermission();
   if (perm !== 'granted') return null;
 
-  const appServerKey = urlBase64ToUint8Array(publicVapidKey);
+  const appServerKey = urlBase64ToUint8Array(publicKey);
   const sub = await reg.pushManager.subscribe({ 
     userVisibleOnly: true, 
     applicationServerKey: appServerKey.buffer as ArrayBuffer
