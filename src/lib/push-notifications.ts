@@ -19,20 +19,44 @@ export async function registerPush(): Promise<PushSub> {
 
   if (!('serviceWorker' in navigator) || !('PushManager' in window)) return null;
 
-  const reg = await navigator.serviceWorker.register('/sw.js');
+  // Ensure the Service Worker is registered and active before subscribing
+  await navigator.serviceWorker.register('/sw.js');
+  const readyReg = await navigator.serviceWorker.ready;
+
   const perm = await Notification.requestPermission();
   if (perm !== 'granted') return null;
 
   const appServerKey = urlBase64ToUint8Array(publicKey);
-  const sub = await reg.pushManager.subscribe({ 
-    userVisibleOnly: true, 
-    applicationServerKey: appServerKey.buffer as ArrayBuffer
-  });
 
-  // Save to backend
-  await supabase.functions.invoke('push-subscribe', {
-    body: { subscription: sub.toJSON() }
+  // Try to reuse existing subscription, otherwise (re)subscribe
+  let sub = await readyReg.pushManager.getSubscription();
+  if (!sub) {
+    try {
+      sub = await readyReg.pushManager.subscribe({
+        userVisibleOnly: true,
+        // Pass the Uint8Array directly (more compatible than ArrayBuffer)
+        applicationServerKey: appServerKey.buffer as ArrayBuffer,
+      });
+    } catch (err) {
+      // If there's a conflicting old subscription (e.g., VAPID key changed), unsubscribe and retry once
+      const existing = await readyReg.pushManager.getSubscription();
+      if (existing) {
+        try { await existing.unsubscribe(); } catch (_) {}
+      }
+      sub = await readyReg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: appServerKey.buffer as ArrayBuffer,
+      });
+    }
+  }
+
+  // Save to backend and surface errors if any
+  const { error } = await supabase.functions.invoke('push-subscribe', {
+    body: { subscription: sub.toJSON() },
   });
+  if (error) {
+    throw error;
+  }
 
   return sub;
 }
