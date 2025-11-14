@@ -72,12 +72,13 @@ serve(async (req) => {
       });
     }
 
-    // Create 5 default compartments
-    const compartments = Array.from({ length: 5 }, (_, i) => ({
+    // Create 3 default compartments for ESP32
+    const compartments = Array.from({ length: 3 }, (_, i) => ({
       device_id: device.id,
       idx: i + 1,
       title: `Compartimento ${i + 1}`,
       active: true,
+      servo_angle_deg: i * 90, // 0°, 90°, 180°
     }));
 
     const { error: compartmentsError } = await supabase

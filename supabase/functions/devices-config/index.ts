@@ -93,11 +93,12 @@ serve(async (req) => {
       });
     }
 
-    // Get compartments and schedules
+    // Get compartments (only first 3 for ESP32) and schedules
     const { data: compartments, error: compError } = await supabase
       .from('compartments')
-      .select('*')
+      .select('id, idx, title, active, servo_angle_deg')
       .eq('device_id', device.id)
+      .lte('idx', 3)
       .order('idx');
 
     if (compError) {
@@ -111,7 +112,7 @@ serve(async (req) => {
     const compartmentIds = compartments.map(c => c.id);
     const { data: schedules, error: schedError } = await supabase
       .from('schedules')
-      .select('*')
+      .select('id, compartment_id, time_of_day, days_of_week, window_minutes, enable_led, enable_buzzer')
       .in('compartment_id', compartmentIds);
 
     if (schedError) {

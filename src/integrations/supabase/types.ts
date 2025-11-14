@@ -59,6 +59,7 @@ export type Database = {
           expected_pill_weight_g: number | null
           id: string
           idx: number
+          servo_angle_deg: number | null
           title: string
         }
         Insert: {
@@ -67,6 +68,7 @@ export type Database = {
           expected_pill_weight_g?: number | null
           id?: string
           idx: number
+          servo_angle_deg?: number | null
           title?: string
         }
         Update: {
@@ -75,6 +77,7 @@ export type Database = {
           expected_pill_weight_g?: number | null
           id?: string
           idx?: number
+          servo_angle_deg?: number | null
           title?: string
         }
         Relationships: [

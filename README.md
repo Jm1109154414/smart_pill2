@@ -1,22 +1,22 @@
 # PillMate - Smart Pillbox System
 
-Sistema inteligente de pastillero con Raspberry Pi 3 y PWA para gestión de medicamentos, confirmación por peso y notificaciones Web Push.
+Sistema inteligente de pastillero con ESP32 y PWA para gestión de medicamentos con servomotor y notificaciones Web Push.
 
 ## 🏗️ Arquitectura
 
 ### Stack Tecnológico
 - **Frontend**: React 18 + Vite + TypeScript + Tailwind CSS + shadcn/ui
 - **Backend**: Supabase (Auth, PostgreSQL, Storage) + Edge Functions (Deno)
-- **Hardware**: Raspberry Pi 3 + Sensor HX711 + LED + Buzzer
+- **Hardware**: ESP32 + Servomotor + LED + Buzzer
 - **Comunicación**: HTTP/HTTPS exclusivamente (no MQTT)
 
 ### Características Principales
 - ✅ Registro y autenticación de usuarios
-- ✅ Gestión de dispositivos (Raspberry Pi)
-- ✅ Configuración de 5 compartimentos por dispositivo
+- ✅ Gestión de dispositivos (ESP32)
+- ✅ Configuración de 3 compartimentos por dispositivo
+- ✅ Control de servomotor con ángulos configurables (0-180°)
 - ✅ Programación de horarios con días, ventanas y alarmas
 - ✅ Notificaciones Web Push en tiempo real
-- ✅ Confirmación automática de tomas por caída de peso
 - ✅ Dashboard con métricas de adherencia
 - ✅ Generación de reportes PDF (semanales/mensuales)
 - ✅ Sistema de comandos (snooze, apply_config, reboot)
@@ -34,11 +34,12 @@ npm o bun
 - Cuenta de Supabase (o Lovable Cloud)
 - Claves VAPID para Web Push
 
-### Para la Raspberry Pi
+### Para el ESP32
 ```bash
-Python 3.9+
-GPIO configurado
-Sensor HX711 conectado
+Arduino IDE o PlatformIO
+Librería HTTPClient
+WiFi configurado
+Servomotor conectado
 ```
 
 ## 🚀 Instalación y Configuración
@@ -102,7 +103,7 @@ VALUES ('reports', 'reports', false, 26214400, ARRAY['application/pdf']);
 ### 5. Edge Functions
 Las funciones se despliegan automáticamente. Verificar en Supabase Dashboard:
 - `devices-register`, `devices-config`
-- `events-dose`, `weights-bulk`, `doses-query`
+- `events-dose`, `doses-query`
 - `reports-generate`
 - `push-subscribe`, `push-send`, `alarm-start`
 - `commands-create`, `commands-poll`, `commands-ack`
@@ -114,16 +115,23 @@ npm run dev
 
 Abrir http://localhost:5173
 
-## 🔌 Contrato HTTP para Raspberry Pi
+## 🔌 Contrato HTTP para Agente ESP32
 
 Base URL: `https://tu-proyecto.supabase.co/functions/v1`
 
 ### Autenticación
+El ESP32 debe autenticarse usando su Serial (dirección MAC) y un Secret (PSK almacenado en NVS o código).
+
 Headers requeridos para endpoints de dispositivo:
 ```
-X-Device-Serial: <serial-del-dispositivo>
-X-Device-Secret: <secret-del-dispositivo>
+X-Device-Serial: <MAC-address-del-ESP32>
+X-Device-Secret: <PSK-del-dispositivo>
 ```
+
+**Configuración del ESP32:**
+- **Serial**: Usar la dirección MAC del ESP32 (ej: `ESP32-AABBCCDDEE`)
+- **Secret**: Pre-Shared Key (PSK) almacenado en NVS o hardcoded
+- El Secret se hashea con SHA-256 en el servidor para validación
 
 ### Endpoints Principales
 
@@ -131,8 +139,8 @@ X-Device-Secret: <secret-del-dispositivo>
 ```http
 GET /devices-config
 Headers:
-  X-Device-Serial: RPI-12345
-  X-Device-Secret: mi-secret-seguro
+  X-Device-Serial: ESP32-AABBCCDDEE
+  X-Device-Secret: mi-psk-seguro
 ```
 
 **Respuesta:**
@@ -140,8 +148,40 @@ Headers:
 {
   "timezone": "America/Mexico_City",
   "deviceId": "uuid",
-  "compartments": [...],
-  "schedules": [...]
+  "compartments": [
+    {
+      "id": "uuid",
+      "idx": 1,
+      "title": "Aspirina",
+      "active": true,
+      "servo_angle_deg": 0
+    },
+    {
+      "id": "uuid",
+      "idx": 2,
+      "title": "Ibuprofeno",
+      "active": true,
+      "servo_angle_deg": 90
+    },
+    {
+      "id": "uuid",
+      "idx": 3,
+      "title": "Paracetamol",
+      "active": true,
+      "servo_angle_deg": 180
+    }
+  ],
+  "schedules": [
+    {
+      "id": "uuid",
+      "compartment_id": "uuid",
+      "time_of_day": "08:00",
+      "days_of_week": 127,
+      "window_minutes": 10,
+      "enable_led": true,
+      "enable_buzzer": true
+    }
+  ]
 }
 ```
 
@@ -151,76 +191,76 @@ POST /events-dose
 Content-Type: application/json
 
 {
-  "serial": "RPI-12345",
-  "secret": "mi-secret-seguro",
+  "serial": "ESP32-AABBCCDDEE",
+  "secret": "mi-psk-seguro",
   "compartmentId": "uuid",
   "scheduledAt": "2025-01-11T08:00:00Z",
   "status": "taken",
   "actualAt": "2025-01-11T08:02:30Z",
-  "deltaWeightG": 0.48
+  "deltaWeightG": null
 }
 ```
 
-#### 3. Enviar Lecturas de Peso (Batch)
-```http
-POST /weights-bulk
-Content-Type: application/json
+**Nota:** `deltaWeightG` puede ser `null` ya que el ESP32 no usa sensor de peso.
 
-{
-  "serial": "RPI-12345",
-  "secret": "mi-secret-seguro",
-  "readings": [
-    {
-      "measuredAt": "2025-01-11T08:00:00Z",
-      "weightG": 125.43,
-      "raw": { "adc": 12345 }
-    }
-  ]
-}
-```
-
-#### 4. Iniciar Alarma (Envía Push)
+#### 3. Iniciar Alarma (Envía Push)
 ```http
 POST /alarm-start
 Content-Type: application/json
 
 {
-  "serial": "RPI-12345",
-  "secret": "mi-secret-seguro",
+  "serial": "ESP32-AABBCCDDEE",
+  "secret": "mi-psk-seguro",
   "compartmentId": "uuid",
   "scheduledAt": "2025-01-11T08:00:00Z",
   "title": "Aspirina"
 }
 ```
 
-#### 5. Consultar Comandos (Polling)
+#### 4. Consultar Comandos (Polling)
 ```http
 GET /commands-poll?since=2025-01-11T08:00:00Z
 Headers:
-  X-Device-Serial: RPI-12345
-  X-Device-Secret: mi-secret-seguro
+  X-Device-Serial: ESP32-AABBCCDDEE
+  X-Device-Secret: mi-psk-seguro
 ```
 
-#### 6. Confirmar Comando
+#### 5. Confirmar Comando
 ```http
 POST /commands-ack
 Content-Type: application/json
 
 {
-  "serial": "RPI-12345",
-  "secret": "mi-secret-seguro",
+  "serial": "ESP32-AABBCCDDEE",
+  "secret": "mi-psk-seguro",
   "commandId": "uuid",
   "status": "done"
 }
 ```
 
-### Flujo de Trabajo de la Raspberry Pi
+### Flujo de Trabajo del ESP32
 
-1. **Startup:** Sincronizar NTP, obtener configuración, programar alarmas
-2. **Loop:** Polling de comandos cada 60s, monitorear peso
-3. **Alarma:** Activar LED/Buzzer, POST a `alarm-start` (envía push)
-4. **Toma:** Detectar caída de peso, POST a `events-dose`
-5. **Comandos:** Procesar snooze, apply_config, reboot
+1. **Startup:** 
+   - Conectar WiFi
+   - Sincronizar tiempo via NTP
+   - Obtener configuración (`/devices-config`)
+   - Programar alarmas basadas en schedules
+
+2. **Loop Principal:**
+   - Polling de comandos cada 60s (`/commands-poll`)
+   - Ejecutar comandos (snooze, apply_config, reboot)
+
+3. **Alarma:**
+   - Activar LED/Buzzer según configuración
+   - Mover servomotor al ángulo del compartimento
+   - POST a `/alarm-start` (envía notificación push al usuario)
+   - Esperar confirmación del usuario (botón físico o comando)
+   - POST a `/events-dose` con status="taken" o "missed"
+
+4. **Comandos:**
+   - `snooze`: Posponer alarma 5 minutos
+   - `apply_config`: Recargar configuración
+   - `reboot`: Reiniciar dispositivo
 
 ## 🔔 Notificaciones Web Push
 
@@ -276,30 +316,31 @@ Content-Type: application/json
 2. Completa el formulario con `serial`, `secret`, `name` y `timezone`
 3. Guarda el dispositivo
 
-### Probar Raspberry Pi (con curl)
-Desde la Pi o cualquier terminal, reemplaza los placeholders:
+### Probar ESP32 (con curl)
+Desde cualquier terminal, reemplaza los placeholders:
 ```bash
 # Activar alarma (envía push al usuario)
 curl -X POST https://tu-proyecto.supabase.co/functions/v1/alarm-start \
   -H "Content-Type: application/json" \
   -d '{
-    "serial": "TU-SERIAL",
-    "secret": "TU-SECRET",
+    "serial": "ESP32-AABBCCDDEE",
+    "secret": "TU-PSK",
     "compartmentId": "uuid-compartment",
-    "scheduledAt": "2025-01-15T08:00:00Z"
+    "scheduledAt": "2025-01-15T08:00:00Z",
+    "title": "Aspirina"
   }'
 
 # Reportar toma de pastilla
 curl -X POST https://tu-proyecto.supabase.co/functions/v1/events-dose \
   -H "Content-Type: application/json" \
   -d '{
-    "serial": "TU-SERIAL",
-    "secret": "TU-SECRET",
+    "serial": "ESP32-AABBCCDDEE",
+    "secret": "TU-PSK",
     "compartmentId": "uuid-compartment",
     "scheduledAt": "2025-01-15T08:00:00Z",
-    "takenAt": "2025-01-15T08:02:30Z",
-    "confirmedByWeight": true,
-    "measuredWeightG": 0.5
+    "status": "taken",
+    "actualAt": "2025-01-15T08:02:30Z",
+    "deltaWeightG": null
   }'
 ```
 
@@ -346,7 +387,7 @@ VALUES ('reports', 'reports', false);
 
 - [Documentación Supabase](https://supabase.com/docs)
 - [Web Push Protocol](https://developers.google.com/web/fundamentals/push-notifications)
-- [Raspberry Pi GPIO](https://www.raspberrypi.com/documentation/)
+- [ESP32 Documentation](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/)
 
 ## 📝 Licencia
 

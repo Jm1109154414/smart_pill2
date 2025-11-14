@@ -384,11 +384,6 @@ export default function Dashboard() {
                                 minute: '2-digit',
                               })}
                             </p>
-                            {event.delta_weight_g && (
-                              <p className="text-xs text-muted-foreground">
-                                Δ Peso: {event.delta_weight_g.toFixed(2)}g
-                              </p>
-                            )}
                           </div>
                           {getStatusBadge(event.status)}
                         </div>
