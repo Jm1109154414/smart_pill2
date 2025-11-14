@@ -15,6 +15,7 @@ interface Compartment {
   title: string;
   expected_pill_weight_g: number | null;
   active: boolean;
+  servo_angle_deg: number | null;
 }
 
 export default function Compartments() {
@@ -62,6 +63,7 @@ export default function Compartments() {
         title: comp.title,
         expected_pill_weight_g: comp.expected_pill_weight_g,
         active: comp.active,
+        servo_angle_deg: comp.servo_angle_deg,
       }));
 
       for (const update of updates) {
@@ -120,12 +122,12 @@ export default function Compartments() {
         </Button>
         <div>
           <h1 className="text-3xl font-bold text-foreground mb-2">Compartimentos</h1>
-          <p className="text-muted-foreground">Configura los 5 compartimentos de tu pastillero</p>
+          <p className="text-muted-foreground">Configura los 3 compartimentos de tu pastillero ESP32</p>
         </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {compartments.map((comp) => (
+        {compartments.filter(c => c.idx <= 3).map((comp) => (
           <Card key={comp.id}>
             <CardHeader>
               <CardTitle>Compartimento {comp.idx}</CardTitle>
@@ -151,6 +153,24 @@ export default function Compartments() {
                     updateCompartment(comp.idx, "title", e.target.value)
                   }
                   placeholder="ej: Aspirina"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor={`angle-${comp.idx}`}>Ángulo Servo (0-180°)</Label>
+                <Input
+                  id={`angle-${comp.idx}`}
+                  type="number"
+                  min="0"
+                  max="180"
+                  value={comp.servo_angle_deg ?? comp.idx === 1 ? 0 : comp.idx === 2 ? 90 : 180}
+                  onChange={(e) =>
+                    updateCompartment(
+                      comp.idx,
+                      "servo_angle_deg",
+                      e.target.value ? parseInt(e.target.value) : null
+                    )
+                  }
+                  placeholder={`${comp.idx === 1 ? '0' : comp.idx === 2 ? '90' : '180'}`}
                 />
               </div>
               <div className="space-y-2">
