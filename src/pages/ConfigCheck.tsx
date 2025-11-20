@@ -128,21 +128,38 @@ export default function ConfigCheck() {
   };
 
   const handleResubscribe = async () => {
+    console.log('[handleResubscribe] Iniciando re-suscripción...');
     setProcessing(true);
     try {
       if ('serviceWorker' in navigator) {
         // No esperes a serviceWorker.ready: usa getRegistration o registra si no existe
+        console.log('[handleResubscribe] Obteniendo registro del Service Worker...');
         let reg = await navigator.serviceWorker.getRegistration('/sw.js');
+        console.log('[handleResubscribe] Registro encontrado:', !!reg);
+        
         if (!reg) {
+          console.log('[handleResubscribe] Registrando Service Worker...');
           reg = await navigator.serviceWorker.register('/sw.js');
         }
+        
         const existingSub = await reg.pushManager.getSubscription();
+        console.log('[handleResubscribe] Suscripción existente:', !!existingSub);
+        
         if (existingSub) {
-          try { await existingSub.unsubscribe(); } catch (_) {}
+          console.log('[handleResubscribe] Desuscribiendo suscripción existente...');
+          try { 
+            const result = await existingSub.unsubscribe();
+            console.log('[handleResubscribe] Desuscripción exitosa:', result);
+          } catch (e) {
+            console.error('[handleResubscribe] Error al desuscribirse:', e);
+          }
         }
       }
       
+      console.log('[handleResubscribe] Llamando a registerPush...');
       const sub = await registerPush();
+      console.log('[handleResubscribe] registerPush completado:', !!sub);
+      
       if (sub) {
         toast({
           title: "Éxito",
@@ -157,9 +174,10 @@ export default function ConfigCheck() {
         });
       }
     } catch (e: any) {
+      console.error('[handleResubscribe] Error general:', e);
       toast({
         title: "Error",
-        description: e.message,
+        description: e.message || "Error desconocido al re-suscribirse",
         variant: "destructive",
       });
     } finally {
