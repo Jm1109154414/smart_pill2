@@ -9,7 +9,7 @@ const Index = () => {
           <div className="inline-flex items-center justify-center w-20 h-20 bg-white rounded-3xl shadow-elevated mb-6">
             <Pill className="w-10 h-10 text-primary" />
           </div>
-          <h1 className="text-5xl font-bold text-white mb-6">PillMate</h1>
+          <h1 className="text-5xl font-bold text-white mb-6">Smart Pill</h1>
           <p className="text-xl text-white/90 mb-8 max-w-2xl mx-auto">
             Pastillero inteligente. Nunca olvides tomar tus medicamentos.
           </p>
