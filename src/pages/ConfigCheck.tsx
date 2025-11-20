@@ -235,6 +235,19 @@ export default function ConfigCheck() {
           </Alert>
         )}
 
+        {notificationPerm === 'denied' && (
+          <Alert variant="destructive">
+            <AlertDescription>
+              <strong>Permisos de notificación bloqueados.</strong> Para habilitar las notificaciones:
+              <ol className="list-decimal ml-4 mt-2 space-y-1 text-sm">
+                <li>Haz clic en el icono de candado o información en la barra de direcciones</li>
+                <li>Busca "Notificaciones" y cámbialo a "Permitir"</li>
+                <li>Recarga la página y haz clic en "Re-suscribirme"</li>
+              </ol>
+            </AlertDescription>
+          </Alert>
+        )}
+
         {health && !health.hasReportsBucket && (
           <Alert>
             <AlertDescription>
