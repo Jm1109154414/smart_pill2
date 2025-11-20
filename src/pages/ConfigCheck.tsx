@@ -131,6 +131,15 @@ export default function ConfigCheck() {
     console.log('[handleResubscribe] Iniciando re-suscripción...');
     setProcessing(true);
     try {
+      // Forzar una recarga del estado de permisos
+      console.log('[handleResubscribe] Verificando permisos actuales...');
+      const currentPerm = await Notification.requestPermission();
+      console.log('[handleResubscribe] Permiso actual después de solicitar:', currentPerm);
+      
+      if (currentPerm === 'denied') {
+        throw new Error('Los permisos siguen bloqueados. Por favor, cierra todas las pestañas de este sitio, abre una nueva pestaña en incógnito (Ctrl+Shift+N) e intenta desde ahí.');
+      }
+      
       if ('serviceWorker' in navigator) {
         // No esperes a serviceWorker.ready: usa getRegistration o registra si no existe
         console.log('[handleResubscribe] Obteniendo registro del Service Worker...');
@@ -163,7 +172,7 @@ export default function ConfigCheck() {
       if (sub) {
         toast({
           title: "Éxito",
-          description: "Re-suscripción completada",
+          description: "Re-suscripción completada correctamente",
         });
         await loadData();
       } else {
@@ -256,12 +265,11 @@ export default function ConfigCheck() {
         {notificationPerm === 'denied' && (
           <Alert variant="destructive">
             <AlertDescription>
-              <strong>Permisos de notificación bloqueados.</strong> Para solucionar esto:
+              <strong>Caché de permisos:</strong> Aunque ya permitiste las notificaciones en la configuración, el navegador está usando una versión cacheada. Prueba:
               <ol className="list-decimal ml-4 mt-2 space-y-1 text-sm">
-                <li>Haz clic en el icono de candado/información en la barra de direcciones</li>
-                <li>Busca "Notificaciones" y selecciona "Permitir"</li>
-                <li><strong>IMPORTANTE:</strong> Presiona Ctrl+Shift+R (Windows) o Cmd+Shift+R (Mac) para recargar limpiando caché</li>
-                <li>Si sigue sin funcionar, ve a chrome://settings/content/notifications, encuentra este sitio y elimínalo de la lista de bloqueados</li>
+                <li><strong>Opción 1 (Recomendada):</strong> Abre una ventana de incógnito (Ctrl+Shift+N), inicia sesión e intenta desde ahí</li>
+                <li><strong>Opción 2:</strong> Cierra TODAS las pestañas de este sitio, espera 10 segundos y vuelve a abrir</li>
+                <li><strong>Opción 3:</strong> Haz clic en "Re-suscribirme" abajo (ahora forzará una nueva solicitud de permisos)</li>
               </ol>
             </AlertDescription>
           </Alert>
@@ -360,22 +368,22 @@ export default function ConfigCheck() {
             {notificationPerm === 'denied' && (
               <Alert className="w-full mb-3">
                 <AlertDescription className="text-sm">
-                  Los permisos están bloqueados. Sigue las instrucciones de arriba y luego presiona <strong>Ctrl+Shift+R</strong> (Windows) o <strong>Cmd+Shift+R</strong> (Mac) para recargar.
+                  <strong>Solución rápida:</strong> Haz clic en "Re-suscribirme" (ahora forzará una nueva solicitud) o usa modo incógnito.
                 </AlertDescription>
               </Alert>
             )}
             <Button
               onClick={handleActivateNotifications}
-              disabled={processing || !hasVapidFrontend || hasSubscription || notificationPerm === 'denied'}
+              disabled={processing || !hasVapidFrontend || hasSubscription}
             >
               Activar notificaciones
             </Button>
             <Button
               variant="outline"
               onClick={handleResubscribe}
-              disabled={processing || !hasVapidFrontend || notificationPerm === 'denied'}
+              disabled={processing || !hasVapidFrontend}
             >
-              Re-suscribirme
+              Re-suscribirme {notificationPerm === 'denied' ? '(Forzar)' : ''}
             </Button>
             <Button
               variant="secondary"
