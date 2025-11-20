@@ -1,3 +1,6 @@
+// DEPRECATED: This function is no longer used as the pill dispenser does not have a weight sensor.
+// Kept for reference only.
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";

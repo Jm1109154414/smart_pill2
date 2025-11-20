@@ -18,7 +18,6 @@ type DoseEvent = {
   scheduled_at: string; 
   status: 'taken' | 'late' | 'missed' | 'skipped'; 
   actual_at: string | null; 
-  delta_weight_g: number | null;
   compartments?: { idx: number; title: string } | null;
 };
 
@@ -134,7 +133,7 @@ export default function Dashboard() {
 
         const { data, error } = await supabase
           .from('dose_events')
-          .select('id, device_id, compartment_id, scheduled_at, status, actual_at, delta_weight_g, compartments(idx, title)')
+          .select('id, device_id, compartment_id, scheduled_at, status, actual_at, compartments(idx, title)')
           .eq('device_id', selectedDeviceId)
           .gte('scheduled_at', from.toISOString())
           .order('scheduled_at', { ascending: false });
@@ -170,7 +169,7 @@ export default function Dashboard() {
 
           supabase
             .from('dose_events')
-            .select('id, device_id, compartment_id, scheduled_at, status, actual_at, delta_weight_g, compartments(idx, title)')
+            .select('id, device_id, compartment_id, scheduled_at, status, actual_at, compartments(idx, title)')
             .eq('device_id', selectedDeviceId)
             .gte('scheduled_at', from.toISOString())
             .order('scheduled_at', { ascending: false })
