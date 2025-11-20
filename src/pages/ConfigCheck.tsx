@@ -256,11 +256,12 @@ export default function ConfigCheck() {
         {notificationPerm === 'denied' && (
           <Alert variant="destructive">
             <AlertDescription>
-              <strong>Permisos de notificación bloqueados.</strong> Para habilitar las notificaciones:
+              <strong>Permisos de notificación bloqueados.</strong> Para solucionar esto:
               <ol className="list-decimal ml-4 mt-2 space-y-1 text-sm">
-                <li>Haz clic en el icono de candado o información en la barra de direcciones</li>
-                <li>Busca "Notificaciones" y cámbialo a "Permitir"</li>
-                <li>Recarga la página y haz clic en "Re-suscribirme"</li>
+                <li>Haz clic en el icono de candado/información en la barra de direcciones</li>
+                <li>Busca "Notificaciones" y selecciona "Permitir"</li>
+                <li><strong>IMPORTANTE:</strong> Presiona Ctrl+Shift+R (Windows) o Cmd+Shift+R (Mac) para recargar limpiando caché</li>
+                <li>Si sigue sin funcionar, ve a chrome://settings/content/notifications, encuentra este sitio y elimínalo de la lista de bloqueados</li>
               </ol>
             </AlertDescription>
           </Alert>
@@ -356,16 +357,23 @@ export default function ConfigCheck() {
             <CardDescription>Pruebas y configuración de notificaciones</CardDescription>
           </CardHeader>
           <CardContent className="flex flex-wrap gap-3">
+            {notificationPerm === 'denied' && (
+              <Alert className="w-full mb-3">
+                <AlertDescription className="text-sm">
+                  Los permisos están bloqueados. Sigue las instrucciones de arriba y luego presiona <strong>Ctrl+Shift+R</strong> (Windows) o <strong>Cmd+Shift+R</strong> (Mac) para recargar.
+                </AlertDescription>
+              </Alert>
+            )}
             <Button
               onClick={handleActivateNotifications}
-              disabled={processing || !hasVapidFrontend || hasSubscription}
+              disabled={processing || !hasVapidFrontend || hasSubscription || notificationPerm === 'denied'}
             >
               Activar notificaciones
             </Button>
             <Button
               variant="outline"
               onClick={handleResubscribe}
-              disabled={processing || !hasVapidFrontend}
+              disabled={processing || !hasVapidFrontend || notificationPerm === 'denied'}
             >
               Re-suscribirme
             </Button>
