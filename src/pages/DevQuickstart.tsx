@@ -94,22 +94,7 @@ export default function DevQuickstart() {
     "compartmentId": "${compartmentId}",
     "scheduledAt": "${new Date().toISOString()}",
     "status": "taken",
-    "actualAt": "${new Date().toISOString()}",
-    "deltaWeightG": 0.48
-  }'`;
-
-  const weightsBulkCurl = `curl -X POST '${import.meta.env.VITE_SUPABASE_URL}/functions/v1/weights-bulk' \\
-  -H 'Content-Type: application/json' \\
-  -d '{
-    "serial": "${deviceSerial}",
-    "secret": "${deviceSecret}",
-    "readings": [
-      {
-        "measuredAt": "${new Date().toISOString()}",
-        "weightG": 125.43,
-        "raw": { "adc": 12345 }
-      }
-    ]
+    "actualAt": "${new Date().toISOString()}"
   }'`;
 
   const CheckItem = ({ label, status }: { label: string; status: boolean }) => (
@@ -214,23 +199,6 @@ export default function DevQuickstart() {
             </div>
             <pre className="bg-muted p-3 rounded-lg text-xs overflow-x-auto">
               {eventsDoseCurl}
-            </pre>
-          </div>
-
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="font-medium">weights-bulk (Enviar Lecturas)</h3>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => copyToClipboard(weightsBulkCurl, "weights-bulk")}
-              >
-                <Copy className="h-4 w-4 mr-2" />
-                Copiar
-              </Button>
-            </div>
-            <pre className="bg-muted p-3 rounded-lg text-xs overflow-x-auto">
-              {weightsBulkCurl}
             </pre>
           </div>
 
