@@ -20,7 +20,7 @@ self.addEventListener('push', (event) => {
     console.error('Failed to parse push data:', e);
   }
 
-  const title = data.title || 'PillMate - Recordatorio';
+  const title = data.title || 'Smart Pill - Recordatorio';
   const options = {
     body: data.body || 'Hora de tu medicamento',
     icon: data.icon || '/icon-192.png',

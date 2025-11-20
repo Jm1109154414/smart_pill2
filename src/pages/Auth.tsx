@@ -49,7 +49,7 @@ const Auth = () => {
           <div className="mx-auto mb-4 w-16 h-16 bg-primary rounded-2xl flex items-center justify-center">
             <Pill className="w-8 h-8 text-primary-foreground" />
           </div>
-          <CardTitle className="text-2xl">PillMate</CardTitle>
+          <CardTitle className="text-2xl">Smart Pill</CardTitle>
           <CardDescription>
             {isLogin ? "Inicia sesión en tu cuenta" : "Crea tu cuenta"}
           </CardDescription>
