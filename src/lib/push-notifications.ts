@@ -17,13 +17,20 @@ export async function registerPush(): Promise<PushSub> {
     throw new Error('VAPID pública ausente: define VITE_VAPID_PUBLIC');
   }
 
-  if (!('serviceWorker' in navigator) || !('PushManager' in window)) return null;
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+    throw new Error('Tu navegador no soporta notificaciones push');
+  }
 
   // Register the Service Worker (use the returned registration directly)
   const reg = await navigator.serviceWorker.register('/sw.js');
 
   const perm = await Notification.requestPermission();
-  if (perm !== 'granted') return null;
+  if (perm === 'denied') {
+    throw new Error('Permisos de notificación denegados. Ve a la configuración del navegador para permitir notificaciones para este sitio.');
+  }
+  if (perm !== 'granted') {
+    throw new Error('Permisos de notificación no concedidos');
+  }
 
   const appServerKey = urlBase64ToUint8Array(publicKey);
 
