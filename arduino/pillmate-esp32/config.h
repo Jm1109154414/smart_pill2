@@ -16,7 +16,7 @@
 #define SUPABASE_URL "https://cnbjuqvppulnfdxscesr.supabase.co"
 
 // Credenciales del dispositivo (obtenidas al registrar el pastillero en la PWA)
-#define DEVICE_SERIAL "TU_SERIAL_AQUI"  // Ejemplo: "ESP32-TEST-001"
-#define DEVICE_SECRET "TU_SECRET_AQUI"  // Ejemplo: "testpass123"
+#define DEVICE_SERIAL "ESP32-TEST-001"  // Ejemplo: "ESP32-TEST-001"
+#define DEVICE_SECRET "testpass123"  // Ejemplo: "testpass123"
 
 #endif
