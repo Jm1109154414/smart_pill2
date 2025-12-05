@@ -127,7 +127,7 @@ export default function Compartments() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {compartments.filter(c => c.idx <= 3).map((comp) => (
+        {compartments.map((comp) => (
           <Card key={comp.id}>
             <CardHeader>
               <CardTitle>Compartimento {comp.idx}</CardTitle>
@@ -160,17 +160,23 @@ export default function Compartments() {
                 <Input
                   id={`angle-${comp.idx}`}
                   type="number"
-                  min="0"
-                  max="180"
-                  value={comp.servo_angle_deg ?? comp.idx === 1 ? 0 : comp.idx === 2 ? 90 : 180}
-                  onChange={(e) =>
-                    updateCompartment(
-                      comp.idx,
-                      "servo_angle_deg",
-                      e.target.value ? parseInt(e.target.value) : null
-                    )
-                  }
-                  placeholder={`${comp.idx === 1 ? '0' : comp.idx === 2 ? '90' : '180'}`}
+                  min={0}
+                  max={180}
+                  // mostramos cadena vacía si no hay valor para evitar controlled/uncontrolled
+                  value={comp.servo_angle_deg != null ? String(comp.servo_angle_deg) : ""}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    if (v === "") {
+                      updateCompartment(comp.idx, "servo_angle_deg", null);
+                      return;
+                    }
+                    const n = parseInt(v, 10);
+                    if (Number.isNaN(n)) return;
+                    // opcional: clamped entre 0 y 180
+                    const clamped = Math.max(0, Math.min(180, n));
+                    updateCompartment(comp.idx, "servo_angle_deg", clamped);
+                  }}
+                  placeholder="ej: 120"
                 />
               </div>
               <div className="space-y-2">
